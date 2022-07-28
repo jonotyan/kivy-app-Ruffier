@@ -1,157 +1,273 @@
-import pandas as pd
-df = pd.read_csv('train.csv')
-df = df.dropna()
-print(df.info())
+from kivy.app import App
+from kivy.uix.screenmanager import ScreenManager, Screen
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.label import Label
+from kivy.uix.button import Button
+from kivy.uix.textinput import TextInput
+from kivy.core.window import Window
+from kivy.uix.scrollview import ScrollView
+ 
+from instructions import txt_instruction, txt_test1, txt_test2, txt_test3, txt_sits
+from ruffier import test
+
+from seconds import Seconds
+from sits import Sits
+from runner import Runner
+
+Window.clearcolor = (.17, 0.54, 0.3, 0.9)
+btn_color = (0.17, 0.54, 0.5, 0.6)
+
+age = 7
+name = ""
+p1, p2, p3 = 0, 0, 0
+ 
+def check_int(str_num):
+    # возвращает число или False, если строка не конвертируется
+    try:
+        return int(str_num)
+    except:
+        return False
+
+class InstrScr(Screen):
+   def __init__(self, **kwargs):
+       super().__init__(**kwargs)
+ 
+       instr = Label(text=txt_instruction)
+ 
+       lbl1 = Label(text='Введите имя:', halign='right')
+       self.in_name = TextInput(multiline=False)
+       lbl2 = Label(text='Введите возраст:', halign='right')
+ 
+       self.in_age = TextInput(text='7', multiline=False)
+       self.btn = Button(text='Начать', size_hint=(0.3, 0.2), pos_hint={'center_x': 0.5})
+       self.btn.background_color = btn_color
+       self.btn.on_press = self.next
+ 
+       line1 = BoxLayout(size_hint=(0.8, None), height='30sp')
+       line2 = BoxLayout(size_hint=(0.8, None), height='30sp')
+       line1.add_widget(lbl1)
+       line1.add_widget(self.in_name)
+       line2.add_widget(lbl2)
+       line2.add_widget(self.in_age)
+ 
+       outer = BoxLayout(orientation='vertical', padding=8, spacing=8)
+       outer.add_widget(instr)
+       outer.add_widget(line1)
+       outer.add_widget(line2)
+       outer.add_widget(self.btn)
+ 
+       self.add_widget(outer)
+ 
+   def next(self):
+    name = self.in_name.text
+    age = check_int(self.in_age.text)
+    if age == False or age < 7:
+      age = 7
+      self.in_age.text = str(age)
+    else:
+      self.manager.current = 'pulse1'
+ 
+class PulseScr(Screen):
+   def __init__(self, **kwargs):
+       super().__init__(**kwargs)
+       self.next_screen = False
+      
+       instr = Label(text=txt_test1)
+       self.lbl_sec = Seconds(15)
+       self.lbl_sec.bind(done=self.sec_finished)
+
+       line = BoxLayout(size_hint=(0.8, None), height='30sp')
+       lbl_result = Label(text='Введите результат:', halign='right')
+       self.in_result = TextInput(text='0', multiline=False)
+       self.in_result.set_disabled(True)
+      
+       line.add_widget(lbl_result)
+       line.add_widget(self.in_result)
+ 
+       self.btn = Button(text='Начать', pos_hint={'center_x': 0.5})
+       self.btn.background_color = btn_color
+       self.btn.on_press = self.next
+ 
+       outer = BoxLayout(orientation='vertical', padding=8, spacing=8)
+       outer.add_widget(instr)
+       #outer.add_widget(lbl1)
+       outer.add_widget(self.lbl_sec)
+       outer.add_widget(line)
+       self.line3 = BoxLayout(size_hint=(0.8, None), height='80sp', pos_hint={'center_x': 0.5})
+       self.line3.add_widget(self.btn)
+       outer.add_widget(self.line3)
+    
+       self.add_widget(outer)
+
+   def sec_finished(self, *args):
+       self.next_screen = True
+       self.in_result.set_disabled(False)
+       self.btn.set_disabled(False)
+       self.btn.text = 'Продолжить'
+
+       self.line3.remove_widget(self.btn)
+       self.line3.add_widget(self.btn)
 
 
-df.drop(['Mjob', 'Fjob'], axis = 1, inplace = True)
+   def next(self):
+       if not self.next_screen:
+           self.btn.set_disabled(True)
+           self.lbl_sec.start()
+       else:
+           global p1
+           p1 = check_int(self.in_result.text)
+           if p1 == False or p1 <= 0:
+               p1 = 0
+               self.in_result.text = str(p1)
+           else:
+               self.manager.current = 'sits'
+ 
+class CheckSits(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.next_screen = False
 
-def sex_apply(sex):
-    if sex == 'M':
-        return 0
-    if sex == 'F':
-        return 1
+        instr = Label(text=txt_sits, size_hint=(0.5, 1))
+        self.lbl_sits = Sits(30)
+        self.run = Runner(total=30, steptime=1.5, size_hint=(0.4, 1))
+        self.run.bind(finished=self.run_finished)
 
-def edu_apply(edu):
-    if edu == 'none':
-        return 0
-    if edu == 'primary education (4th grade)':
-        return 1
-    if edu == '5th to 9th grade':
-        return 2
-    if edu == 'secondary education':
-        return 3
-    if edu == 'higher education':
-        return 4
+        line = BoxLayout()
+        vlay = BoxLayout(orientation='vertical', size_hint=(0.3, 1))
+        vlay.add_widget(self.lbl_sits)
+        line.add_widget(instr)
+        line.add_widget(vlay)
+        line.add_widget(self.run)
 
-def yes_no_apply(yesno):
-    if yesno == 'yes':
-        return 0
-    if yesno == 'no':
-        return 1
+        self.btn = Button(text='Начать', size_hint=(0.3, 0.2), pos_hint={'center_x': 0.5})
+        self.btn.background_color = btn_color
+        self.btn.on_press = self.next
 
-def address_apply(address):
-    if address == 'Urban':
-        return 0
-    if address == 'Rural':
-        return 1
+        outer = BoxLayout(orientation='vertical', padding=8, spacing=8)
+        outer.add_widget(line)
+        outer.add_widget(self.btn)
 
-def fam_size_apply(famsize):
-    if famsize == 'greater than 3 persons':
-        return 0
-    if famsize == '3 persons or less':
-        return 1
+        self.add_widget(outer)
 
-def reason_apply(reason):
-    if reason == 'course':
-        return 0
-    if reason == 'home':
-        return 1
-    if reason == 'reputation':
-        return 2
-    if reason == 'other':
-        return 3
+    def run_finished(self, instance, value):
+        self.btn.set_disabled(False)
+        self.btn.text = 'Продолжить'
+        self.next_screen = True
 
-def guardian_apply(guardian):
-    if guardian == 'mother':
-        return 0
-    if guardian == 'father':
-        return 1
-    if guardian == 'other':
-        return 2
-
-def famrel_apply(famrel):
-    if famrel == 'very bad':
-        return 0
-    if famrel == 'bad':
-        return 1
-    if famrel == 'normal':
-        return 2
-    if famrel == 'good':
-        return 3
-    if famrel == 'excellent':
-        return 4
-
-def freetime_apply(freetime):
-    if freetime == 'very low':
-        return 0
-    if freetime == 'low':
-        return 1
-    if freetime == 'medium':
-        return 2
-    if freetime == 'high':
-        return 3
-    if freetime == 'very high':
-        return 4
-
-def traveltime_apply(traveltime):
-    if traveltime == 'less than 15 min.':
-        return 0
-    if traveltime == '15 to 30 min.':
-        return 1
-    if traveltime == '30 min. to 1 hour':
-        return 2
-    if traveltime == 'more than 1 hour':
-        return 3
-
-def studytime_apply(studytime):
-    if studytime == 'less than 2 hours':
-        return 0
-    if studytime == '2 to 5 hours':
-        return 1
-    if studytime == '5 to 10 hours':
-        return 2
-    if studytime == 'more than 10 hours':
-        return 3
-
-df['sex'] = df['sex'].apply(sex_apply)
-df['Medu'] = df['Medu'].apply(edu_apply)
-df['Fedu'] = df['Fedu'].apply(edu_apply)
-df['address'] = df['address'].apply(address_apply)
-df['famsize'] = df['famsize'].apply(fam_size_apply)
-df['reason'] = df['reason'].apply(reason_apply)
-df['guardian'] = df['guardian'].apply(guardian_apply)
-df['schoolsup'] = df['schoolsup'].apply(yes_no_apply)
-df['famsup'] = df['famsup'].apply(yes_no_apply)
-df['paid'] = df['paid'].apply(yes_no_apply)
-df['activities'] = df['activities'].apply(yes_no_apply)
-df['nursery'] = df['nursery'].apply(yes_no_apply)
-df['higher'] = df['higher'].apply(yes_no_apply)
-df['internet'] = df['internet'].apply(yes_no_apply)
-df['famrel'] = df['famrel'].apply(famrel_apply)
-df['freetime'] = df['freetime'].apply(freetime_apply)
-df['traveltime'] = df['traveltime'].apply(traveltime_apply)
-df['studytime'] = df['studytime'].apply(studytime_apply)
-
-print(df.info())
+    def next(self):
+        if not self.next_screen:
+            self.btn.set_disabled(True)
+            self.run.start()
+            self.run.bind(value=self.lbl_sits.next)
+        else:
+            self.manager.current = 'pulse2'
 
 
+class PulseScr2(Screen):
+   def __init__(self, **kwargs):
+       self.next_screen = False
 
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import confusion_matrix, accuracy_score
+       self.stage = 0
+       super().__init__(**kwargs)
+ 
+       instr = Label(text=txt_test3)
+ 
+       line1 = BoxLayout(size_hint=(0.8, None), height='30sp')
+       self.lbl_sec = Seconds(15)
+       self.lbl_sec.bind(done=self.sec_finished)
+       self.lbl1 = Label(text='Считайте пульс')
 
-i = 0
-aver_result = 0
+       lbl_result1 = Label(text='Результат:', halign='right')
+       self.in_result1 = TextInput(text='0', multiline=False)
+ 
+       line1.add_widget(lbl_result1)
+       line1.add_widget(self.in_result1)
+ 
+       line2 = BoxLayout(size_hint=(0.8, None), height='30sp')
+       lbl_result2 = Label(text='Результат после отдыха:', halign='right')
+       self.in_result2 = TextInput(text='0', multiline=False)
 
-while i<5:
-    x = df.drop('result', axis = 1)
-    y = df['result']
+       self.in_result1.set_disabled(True)
+       self.in_result2.set_disabled(True)
+ 
+       line2.add_widget(lbl_result2)
+       line2.add_widget(self.in_result2)
+ 
+       self.btn = Button(text='Начать', size_hint=(0.3, 0.5), pos_hint={'center_x': 0.5})
+       self.btn.background_color = btn_color
+       self.btn.on_press = self.next
+ 
+       outer = BoxLayout(orientation='vertical', padding=8, spacing=8)
+       outer.add_widget(instr)
+       outer.add_widget(self.lbl1)
+       outer.add_widget(self.lbl_sec)
+       outer.add_widget(line1)
+       outer.add_widget(line2)
+       outer.add_widget(self.btn)
+ 
+       self.add_widget(outer)
 
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size = 0.4)
-
-    sc = StandardScaler()
-    x_train = sc.fit_transform(x_train)
-    x_test = sc.transform(x_test)
-
-    classifier = KNeighborsClassifier(n_neighbors = 5)
-    classifier.fit(x_train, y_train)
-
-    y_pred = classifier.predict(x_test)
-    print('Процент правильно предсказанных исходов:', accuracy_score(y_test, y_pred) * 100)
-    aver_result += accuracy_score(y_test, y_pred) * 100
-    print('Confusion matrix:')
-    print(confusion_matrix(y_test, y_pred))
-    i+=1
-print('Процент правильно предсказанных исходов:', aver_result/5)
+   def sec_finished(self, *args):
+    if self.lbl_sec.done == True:
+      if self.stage == 0:
+          # закончили первый подсчет, отдыхаем
+          self.stage = 1
+          self.lbl1.text = 'Отдыхайте'
+          self.lbl_sec.restart(30)
+          self.in_result1.set_disabled(False)
+      elif self.stage == 1:
+          # закончили отдых, считаем
+          self.stage = 2
+          self.lbl1.text='Считайте пульс'
+          self.lbl_sec.restart(15)
+      elif self.stage == 2:
+          self.in_result2.set_disabled(False)
+          self.btn.set_disabled(False)
+          self.btn.text = 'Завершить'
+          self.next_screen = True
+ 
+   def next(self):
+       if not self.next_screen:
+            self.btn.set_disabled(True)
+            self.lbl_sec.start()
+       else:
+            global p2, p3
+            p2 = check_int(self.in_result1.text)
+            p3 = check_int(self.in_result2.text)
+            if p2 == False:
+                p2 = 0
+                self.in_result1.text = str(p2)
+            elif p3 == False:
+                p3 = 0
+                self.in_result2.text = str(p3)
+            else:
+                # переходим 
+                self.manager.current = 'result'
+ 
+class Result(Screen):
+   def __init__(self, **kwargs):
+       super().__init__(**kwargs)
+ 
+       self.outer = BoxLayout(orientation='vertical', padding=8, spacing=8)
+       self.instr = Label(text = '')
+       self.outer.add_widget(self.instr)
+ 
+       self.add_widget(self.outer)
+       self.on_enter = self.before
+  
+   def before(self):
+       global name
+       self.instr.text = name + '\n' + test(p1, p2, p3, age)
+ 
+class HeartCheck(App):
+   def build(self):
+       sm = ScreenManager()
+       sm.add_widget(InstrScr(name='instr'))
+       sm.add_widget(PulseScr(name='pulse1'))
+       sm.add_widget(CheckSits(name='sits'))
+       sm.add_widget(PulseScr2(name='pulse2'))
+       sm.add_widget(Result(name='result'))
+       return sm
+ 
+app = HeartCheck()
+app.run()
